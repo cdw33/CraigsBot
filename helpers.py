@@ -41,3 +41,17 @@ def extractUrlFromString(string):
 	url = url.replace(',', '')
 
 	return url
+
+# Get already processed comments from file
+def getCommentIdHistory(set):
+	f = open('already_processed', 'r')
+	for commentID in f:
+		set.add(commentID)	
+	f.close()
+
+# Write already processed comments to file
+def saveCommentIdHistory(set):
+	f = open('already_processed', 'w')
+	for commentID in set:
+		f.write("%s\n" % commentID)
+	f.close()

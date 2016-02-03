@@ -1,26 +1,29 @@
 import pycurl
-import time
-import praw
+import logging
 from reddit import *
 from imgur import *
 from craigslist import *
 from archive import *
-from imgurpython import ImgurClient
-from imgurpython.helpers.error import ImgurClientError
+from helpers import getCommentIdHistory, saveCommentIdHistory
 
-# Get already processed comments from file
-def getCommentIdHistory():
-	f = open('already_processed', 'r')
-	for commentID in f:
-		already_done.add(commentID)	
-	f.close()
+def initLogging():
 
-# Write already processed comments to file
-def saveCommentIdHistory():
-	f = open('already_processed', 'w')
-	for commentID in already_done:
-		f.write("%s\n" % comment.id)
-	f.close()
+	logging.basicConfig(level=logging.INFO)
+	logger = logging.getLogger(__name__)
+
+	# create a file handler
+	handler = logging.FileHandler('.log')
+	handler.setLevel(logging.INFO)
+
+	# create a logging format
+	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	handler.setFormatter(formatter)
+
+	# add the handlers to the logger
+	logger.addHandler(handler)
+
+	return logger
+
 
 def buildComment(url):
 	#comment.reply(' Beep Boop!')
@@ -28,8 +31,10 @@ def buildComment(url):
 	#print(archiveURL)
 	print(getListingPhotos(url))
 
+# Initialize logging
+logger = initLogging()
+
 # Store already processed comments
-already_done = []
 already_done = set()
 
 # Create client objects
@@ -42,7 +47,7 @@ mr = reddit.get_subreddit(subreddits)
 comments = mr.get_comments(limit=None, threshold=0)
 
 # Read comment history from file
-getCommentIdHistory()	
+getCommentIdHistory(already_done)
 
 # Scan comments
 for comment in comments:
@@ -53,8 +58,8 @@ for comment in comments:
         	if(verifyCraigslistUrl(craigsURL)):
         		# reply = buildComment()
         		# comment.reply(reply)
-        		buildComment(craigsURL)	        		
+        		buildComment(craigsURL)
         		already_done.add(comment.id)
 
 #Write updated comment history to file
-saveCommentIdHistory()
+saveCommentIdHistory(already_done)

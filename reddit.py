@@ -1,6 +1,9 @@
 import praw
 from helpers import get_input, get_config
 
+from log import *
+log = Logger()
+
 # Authenticate bot on Reddit
 def redditAuth():
 	config = get_config()

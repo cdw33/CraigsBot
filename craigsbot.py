@@ -1,45 +1,69 @@
 import pycurl
-import logging
 from reddit import *
 from imgur import *
 from craigslist import *
 from archive import *
 from helpers import getCommentIdHistory, saveCommentIdHistory
 
-def initLogging():
-
-	logging.basicConfig(level=logging.INFO)
-	logger = logging.getLogger(__name__)
-
-	# create a file handler
-	handler = logging.FileHandler('.log')
-	handler.setLevel(logging.INFO)
-
-	# create a logging format
-	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-	handler.setFormatter(formatter)
-
-	# add the handlers to the logger
-	logger.addHandler(handler)
-
-	return logger
-
+from log import *
+log = Logger()
 
 def buildComment(url):
-	#comment.reply(' Beep Boop!')
-	#archiveURL = getArchiveLink(url)
-	#print(archiveURL)
-	print(getListingPhotos(url))
+	log.i('Building Comment...')
 
-# Initialize logging
-logger = initLogging()
+	# Get Craigslist listing using cURL
+	cl = getCurlResponse(url)
+
+	# Get status of listing
+	status = getListingStatus(cl)
+	if(status is "flagged"):
+		log.i('Listing was flagged for removal, ignoring.')
+		return
+
+	print(getPostDate(cl))
+	print(getPostTime(cl))
+
+	# Retrieve photo links from listing
+	log.i('Retrieving listing photos...')
+	clPhotos = getListingPhotos(cl)
+
+	# If listing has images, create Imgur album of them
+	if(clPhotos is None):
+		log.i('Listing has no photos, continuing...')	
+	else:
+		log.i('Craigslist Photo Links: ')
+		log.i(clPhotos)
+
+		# Retrieve photo links from listing
+		log.i('Uploading photos to imgur...')
+		imgurAlbum = imgur.upload(clPhotos, 'Album Name')
+		log.i('Album Link: ')
+		log.i(imgurAlbum)
+
+	# Archive listing & retrieve link
+	log.i('Retrieving archive link...')
+	archiveURL = getArchiveLink(url)
+	log.i('Archive Link: ' + archiveURL)	
+
+	archiveURL = str(archiveURL)
+	imgurAlbum = str(imgurAlbum)
+
+	# Pretty print final comment to string
+	msg = ''
+	msg += 'CraigsBot\n\n'
+	msg += 'Archived Link: ' + archiveURL + '\n\n'
+	msg += 'Listing Text: ' + '' + '\n\n'
+	msg += 'Listing Photos: ' + imgurAlbum
+
+	return msg
+
 
 # Store already processed comments
 already_done = set()
 
 # Create client objects
 reddit = redditAuth()
-imgur = imgurAuth()
+imgur = Imgur()
 
 # Get comments to process
 subreddits = getSubredditList()
@@ -56,9 +80,13 @@ for comment in comments:
 
         if craigsURL.find("reddit") == -1 and craigsURL.find("archive") == -1:
         	if(verifyCraigslistUrl(craigsURL)):
-        		# reply = buildComment()
-        		# comment.reply(reply)
-        		buildComment(craigsURL)
+        		reply = buildComment(craigsURL)
+
+        		if(reply):
+        			log.i('Final Reply Comment:')
+        			log.i(reply)
+        			# comment.reply(reply)
+
         		already_done.add(comment.id)
 
 #Write updated comment history to file

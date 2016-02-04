@@ -1,53 +1,69 @@
 from imgurpython import ImgurClient
 from imgurpython.helpers.error import ImgurClientError
-from helpers import get_input, get_config, extractUrlFromString
+from helpers import get_input, get_config, extractUrlFromString, getCurlResponse
 
-def imgurAuth():
-	config = get_config()
-	config.read('auth.ini')
-	client_id = config.get('imgur', 'client_id')
-	client_secret = config.get('imgur', 'client_secret')
+from log import *
+log = Logger()
 
-	client = ImgurClient(client_id, client_secret)
+class Imgur:
 
-	# # Authorization flow, pin example (see docs for other auth types)
-	# authorization_url = client.get_auth_url('pin')
+   imgur = None
 
-	# print("Go to the following URL: {0}".format(authorization_url))
+   def __init__(self):
+      config = get_config()
+      config.read('auth.ini')
+      client_id = config.get('imgur', 'client_id')
+      client_secret = config.get('imgur', 'client_secret')
 
-	# # Read in the pin, handle Python 2 or 3 here.
-	# pin = get_input("Enter pin code: ")
+      self.imgur = ImgurClient(client_id, client_secret)
 
-	# # ... redirect user to `authorization_url`, obtain pin (or code or token) ...
-	# credentials = client.authorize(pin, 'pin')
-	# client.set_user_auth(credentials['access_token'], credentials['refresh_token'])
+   def createAlbum(self, album_title):
+   	  log.i('Starting album creation...')
 
-	# print("Authentication successful! Here are the details:")
-	# print("   Access token:  {0}".format(credentials['access_token']))
-	# print("   Refresh token: {0}".format(credentials['refresh_token']))
+   	  fields = {
+	  	'Authorization':'Client-ID {a76fcf734951688}',
+		'title':album_title
+	  }  
 
-	return client
+	  try:
+	  	album = self.imgur.create_album(fields)
+	  	log.i('Album created successfully.')
+	  	return album
+	  except ImgurClientError as e:
+	  	log.e('Failed to create album, aborting.')
+	  	log.e(e.error_message)
+	  	log.e(e.status_code)
 
-def makeImgurAlbum(imgLinks):
-	#Container to hold imgur links
-	imgurLinks = []
-	imgurLinks = set()
+   def uploadImagesToAlbum(self, album, imgList):
+      # For anonymous albums, use album's deletehash instead of id
+	  config = {
+	  	'album': album['deletehash']
+	  }
 
-	print "Starting Imgur album upload."
+	  #Upload images to album
+	  for link in imgList:
+	  	log.i('Uploading ' + link + '...')
+	  	try:
+	  		response = self.imgur.upload_from_url(link, config=config, anon=True)
+	  		log.i('Success!')
+	  	except ImgurClientError as e:
+	  	    print(e.error_message)
+	  	    print(e.status_code)
+	  	    return 0  
 
-	for link in imgLinks:
-		print("Uploading " + link + "...")
-		try:
-			response = imgur.upload_from_url(link, config=None, anon=True)
-			print("Success!")
-		except ImgurClientError as e:
-		    print(e.error_message)
-		    print(e.status_code)
-		    return 0  
-  		
-		url = extractUrlFromString(str(response))
-		imgurLinks.add(url)
+	  	log.i('All images uploaded successfully.') 
+	  	return 1    	
 
-	print("Set uploaded successfully!")
-	print(imgurLinks)
-	return 1		
+   def upload(self, imgLinks, albumName):
+	  # Create new Imgur album
+	  album = self.createAlbum(albumName)
+
+	  success = self.uploadImagesToAlbum(album, imgLinks)
+
+	  if(not success):
+	  	return None
+	  
+	  # Return album URL
+	  albumLink = 'https://imgur.com/a/' + album['id']
+	  return albumLink
+

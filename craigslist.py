@@ -1,11 +1,10 @@
-from imgur import makeImgurAlbum
 from helpers import getCurlResponse
 
-# Scrape photos links from listing
-def getListingPhotos(url):
-	#<div id="thumbs">
-	cl = getCurlResponse(url)
+from log import *
+log = Logger()
 
+# Scrape photos links from listing
+def getListingPhotos(cl):
 	textStartTag = "var imgList ="
 	textEndTag = "</figure>"
 
@@ -31,11 +30,96 @@ def getListingPhotos(url):
 		if(link.find("url") >= 0):
 			imgLinks.add(link[7:len(link)-1])
 
-	# print(imgLinks)
-
-	# makeImgurAlbum(imgLinks)
-
 	return imgLinks
+
+def getListingTitle(cl):
+	startTag = "<title>"
+	endTag = "</title>"
+
+	startAddr = cl.find(startTag) + len(startTag)
+	endAddr = cl.find(endTag)
+
+	title = cl[startAddr:endAddr]
+
+	return title
+
+def getPrice(cl):	
+	startTag = "class=\"price\""
+
+
+	startAddr = cl.find(startTag) + len(startTag) +1
+
+	endAddr = startAddr
+	while(cl[endAddr] is not '<'):
+		endAddr += 1
+
+	price = cl[startAddr:endAddr]
+
+	return price
+
+def getLocation(cl):
+	startTag = "</span><small>"
+
+	startAddr = cl.find(startTag) + len(startTag) + 2
+
+	endAddr = startAddr
+	while(cl[endAddr] is not '<'):
+		endAddr += 1
+	endAddr -= 1
+
+	location = cl[startAddr:endAddr]
+
+	return location	
+
+def getShortDescription(cl):
+	startTag = "og:description\" content=\""
+
+	startAddr = cl.find(startTag) + len(startTag)
+
+	endAddr = startAddr
+	while(cl[endAddr] is not '<'):
+		endAddr += 1
+	endAddr -= 3
+
+	desc = cl[startAddr:endAddr]
+
+	return desc	
+
+def getPostDateTime(cl):	
+	startTag = "posted: <time datetime=\""
+
+	startAddr = cl.find(startTag) + len(startTag)
+	while(cl[startAddr] is not '>'):
+		startAddr += 1
+	startAddr += 1
+
+	endAddr = startAddr
+	while(cl[endAddr] is not '<'):
+		endAddr += 1
+
+	dateTime = cl[startAddr:endAddr]
+
+	return dateTime
+
+def getPostDate(cl):
+	dateTime = getPostDateTime(cl)
+
+	startAddr = 0
+	endAddr = dateTime.find(" ")
+
+	date = dateTime[startAddr:endAddr]
+
+	return date
+
+def getPostTime(cl):
+	dateTime = getPostDateTime(cl)
+
+	startAddr = dateTime.find(" ") + 1
+	endAddr = len(dateTime)
+
+	time = dateTime[startAddr:endAddr]
+
+	return time
 
 # Ignore certain Craigslist subdomains
 def verifyCraigslistUrl(url):
@@ -47,9 +131,7 @@ def verifyCraigslistUrl(url):
 		return 1
 
 # Scrape item description from listing
-def getListingText(url):
-	cl = getCurlResponse(url)
-
+def getListingText(cl):
 	textStartTag = "<section id=\"postingbody\">"
 	textEndTag = "</section>"
 
@@ -64,4 +146,10 @@ def getListingText(url):
 	print(rawText)
 
 	return
+
+def getListingStatus(cl):
+	flagged = "This posting has been flagged for removal"
+
+	if(flagged in cl):
+		return "flagged"
 

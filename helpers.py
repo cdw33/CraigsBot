@@ -2,6 +2,9 @@ import re
 import pycurl
 from StringIO import StringIO
 
+from log import *
+log = Logger()
+
 def get_input(string):
 	''' Get input from console regardless of python 2 or 3 '''
 	try:

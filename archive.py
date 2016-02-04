@@ -1,5 +1,8 @@
 from helpers import getCurlResponse
 
+from log import *
+log = Logger()
+
 # Archive given link using Wayback Machine; returning archive URL
 def getArchiveLink(url):
 	saveURL = "http://web.archive.org/save/"

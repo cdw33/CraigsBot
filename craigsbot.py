@@ -8,55 +8,58 @@ from helpers import getCommentIdHistory, saveCommentIdHistory
 from log import *
 log = Logger()
 
-def buildComment(url):
-	log.i('Building Comment...')
+def processComment(url):
 
 	# Get Craigslist listing using cURL
 	cl = getCurlResponse(url)
 
 	# Get status of listing
 	status = getListingStatus(cl)
-	if(status is "flagged"):
-		log.i('Listing was flagged for removal, ignoring.')
+	if(status is "Flagged"):
+		return
+	elif(status is "PageNotFound"):
 		return
 
-	print(getPostDate(cl))
-	print(getPostTime(cl))
-
+	log.i("Found valid comment, gathering data...")	
+			
 	# Retrieve photo links from listing
 	log.i('Retrieving listing photos...')
 	clPhotos = getListingPhotos(cl)
 
 	# If listing has images, create Imgur album of them
+	imgurAlbum = None
 	if(clPhotos is None):
 		log.i('Listing has no photos, continuing...')	
 	else:
-		log.i('Craigslist Photo Links: ')
-		log.i(clPhotos)
-
 		# Retrieve photo links from listing
 		log.i('Uploading photos to imgur...')
 		imgurAlbum = imgur.upload(clPhotos, 'Album Name')
-		log.i('Album Link: ')
-		log.i(imgurAlbum)
+
+	# Get full description from listing
+	log.i('Retrieving full description from listing...')
+	fullDesc = getListingDescription(cl)
 
 	# Archive listing & retrieve link
 	log.i('Retrieving archive link...')
 	archiveURL = getArchiveLink(url)
-	log.i('Archive Link: ' + archiveURL)	
 
 	archiveURL = str(archiveURL)
-	imgurAlbum = str(imgurAlbum)
 
+	return buildReply(archiveURL, fullDesc, imgurAlbum)
+
+def buildReply(archiveURL, fullDesc, imgurAlbum):
 	# Pretty print final comment to string
 	msg = ''
 	msg += 'CraigsBot\n\n'
-	msg += 'Archived Link: ' + archiveURL + '\n\n'
-	msg += 'Listing Text: ' + '' + '\n\n'
-	msg += 'Listing Photos: ' + imgurAlbum
+	msg += '[Archived Listing](' + archiveURL + ')\n\n'
+
+	msg += 'Listing Description:\n`' + fullDesc + '`'
+
+	if(imgurAlbum is not None):
+		imgurAlbum = str(imgurAlbum)
+		msg += '\n\n[Imgur Album](' + imgurAlbum + ")"
 
 	return msg
-
 
 # Store already processed comments
 already_done = set()
@@ -71,7 +74,7 @@ mr = reddit.get_subreddit(subreddits)
 comments = mr.get_comments(limit=None, threshold=0)
 
 # Read comment history from file
-getCommentIdHistory(already_done)
+#getCommentIdHistory(already_done)
 
 # Scan comments
 for comment in comments:
@@ -80,14 +83,16 @@ for comment in comments:
 
         if craigsURL.find("reddit") == -1 and craigsURL.find("archive") == -1:
         	if(verifyCraigslistUrl(craigsURL)):
-        		reply = buildComment(craigsURL)
+        		reply = processComment(craigsURL)
 
         		if(reply):
-        			log.i('Final Reply Comment:')
-        			log.i(reply)
+        			log.i('Reply built, commenting...')
+        			#log.i(reply)
         			# comment.reply(reply)
+        			log.i("Commenting successful!\n")
 
         		already_done.add(comment.id)
+        		saveCommentIdHistory(already_done) #Write to file to prevent loss
 
 #Write updated comment history to file
 saveCommentIdHistory(already_done)

@@ -43,6 +43,15 @@ def getListingTitle(cl):
 
 	return title
 
+def getFormattedTitle(cl):
+	title = getListingTitle(cl)
+	price = getPrice(cl)
+	location = getLocation(cl)
+
+	formattedTitle = title + ' - ' + price + ' (' + location + ')'	
+
+	return formattedTitle
+
 def getPrice(cl):	
 	startTag = "class=\"price\""
 
@@ -131,25 +140,30 @@ def verifyCraigslistUrl(url):
 		return 1
 
 # Scrape item description from listing
-def getListingText(cl):
+def getListingDescription(cl):
 	textStartTag = "<section id=\"postingbody\">"
 	textEndTag = "</section>"
 
 	startAddr = cl.find(textStartTag)+len(textStartTag)+1
 	endAddr = cl.find(textEndTag)
 
-	rawText = cl[startAddr:endAddr]
+	desc = cl[startAddr:endAddr]
 
 	#Cleanup Raw Text
-	rawText = rawText.replace('<br>', '')
+	desc = desc.replace('<br>', '')
 
-	print(rawText)
+	#Remove multiple carrage returns 
+	while(desc.find('\n\n\n') is not -1):
+		desc = desc.replace('\n\n\n', '\n\n')
 
-	return
+	return desc
 
 def getListingStatus(cl):
 	flagged = "This posting has been flagged for removal"
+	notFound = "craigslist | Page Not Found"
 
 	if(flagged in cl):
-		return "flagged"
+		return "Flagged"
+	elif(notFound in cl):
+		return "PageNotFound"	
 

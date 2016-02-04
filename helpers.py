@@ -49,7 +49,7 @@ def extractUrlFromString(string):
 def getCommentIdHistory(set):
 	f = open('already_processed', 'r')
 	for commentID in f:
-		set.add(commentID)	
+		set.add(commentID.replace('\n', ''))	
 	f.close()
 
 # Write already processed comments to file

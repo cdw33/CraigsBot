@@ -5,8 +5,8 @@ class Logger:
    log = None   
 
    def __init__(self):
-      logging.basicConfig(level=logging.INFO)
-      log = logging.getLogger(__name__)
+      logging.basicConfig(level=logging.DEBUG)
+      self.log = logging.getLogger(__name__)
 
       # create a file handler
       handler = logging.FileHandler('.log')
@@ -17,7 +17,7 @@ class Logger:
       handler.setFormatter(formatter)
 
       # add the handlers to the logger
-      log.addHandler(handler)
+      self.log.addHandler(handler)
 
    def i(self, message):
    	self.log.info(message)

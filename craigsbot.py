@@ -41,7 +41,7 @@ def processComment(url):
 
 	# Archive listing & retrieve link
 	log.i('Retrieving archive link...')
-	archiveURL = getArchiveLink(url)
+	archiveURL = getArchiveLinkAPI(url)
 
 	archiveURL = str(archiveURL)
 
